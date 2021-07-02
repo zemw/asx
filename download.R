@@ -18,11 +18,12 @@ links <- page %>% html_elements("a[target=\"_blank\"]")
 
 # parse all links into a table
 table <-
-  links %>% map_df(function(link) {
+  links %>% imap_dfr(function(link, index) {
     list(
       title = html_text(link),
       href = html_attr(link, "href"),
-      id = html_attr(link, "href") %>% stri_extract(regex = "[0-9]+")
+      id = html_attr(link, "href") %>% stri_extract(regex = "[0-9]+"), 
+      no = index
     )
   }) %>% drop_na(id)
 
@@ -41,7 +42,7 @@ dir.create(dir_name, showWarnings = F)
 json_url <- "http://www.aisixiang.com/data/view_json.php?id="
 
 table %>% 
-  pmap(safely(function(title, href, id) {
+  pmap(safely(function(title, href, id, no) {
     raw <- GET(paste0(json_url, id))
     json <- content(raw, "text") %>% fromJSON()
     body <- read_html(json$content) %>% html_element("body")
@@ -49,7 +50,7 @@ table %>%
     xml_new_root("h2", title) %>% 
       xml_add_sibling(body) %>% 
       minimal_html(title) %>% 
-      write_xml(sprintf("%s/%s.html",dir_name, title))
+      write_xml(sprintf("%s/%d_%s.html",dir_name, no, title))
   }))
 
 message(sprintf("Completed: %s", file.path(getwd(), dir_name)))
