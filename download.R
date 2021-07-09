@@ -10,6 +10,10 @@ library(xml2)
 # ACTION: modify the URL here
 column_url <- "http://www.aisixiang.com/thinktank/LuXun.html"
 
+#
+min_length <- 5000
+max_length <- 50000
+
 # real whole page
 page <- read_html(column_url, encoding = "GBK")
 
@@ -46,11 +50,16 @@ table %>%
     raw <- GET(paste0(json_url, id))
     json <- content(raw, "text") %>% fromJSON()
     body <- read_html(json$content) %>% html_element("body")
-    # modify html: add title
-    xml_new_root("h2", title) %>% 
-      xml_add_sibling(body) %>% 
-      minimal_html(title) %>% 
-      write_xml(sprintf("%s/%d_%s.html",dir_name, no, title))
+    length <- str_length(json$content)
+    
+    # keep only articles of certain length
+    if (length < max_length && length > min_length) {
+      # modify html: add title
+      xml_new_root("h1", title) %>% 
+        xml_add_sibling(body) %>% 
+        minimal_html(title) %>% 
+        write_xml(sprintf("%s/%d_%s.html",dir_name, no, title))
+    }
   }))
 
 message(sprintf("Completed: %s", file.path(getwd(), dir_name)))
